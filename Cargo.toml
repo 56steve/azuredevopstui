@@ -1,0 +1,35 @@
+[package]
+name = "azuredevopstui"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+description = "Terminal UI for your Azure DevOps pull requests, work items and sprint board"
+repository = "https://github.com/ferenyl/azuredevopstui"
+readme = "README.md"
+keywords = ["azure-devops", "tui", "ratatui", "pull-requests", "work-items"]
+categories = ["command-line-utilities"]
+exclude = [".github", "projectdescription.md"]
+
+[dependencies]
+anyhow = "1.0.104"
+chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
+crossterm = { version = "0.29.0", features = ["event-stream", "osc52"] }
+dirs = "7.0.0"
+futures = "0.3.34"
+html2text = "0.17.4"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp"] }
+keyring = "4.2.0"
+notify-rust = "4.18.2"
+open = "5.4.4"
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+ratatui = { version = "0.30.2", features = ["serde", "unstable-rendered-line-info"] }
+ratatui-image = { version = "11", default-features = false, features = ["crossterm"] }
+reqwest = { version = "0.13.5", features = ["json"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+tokio = { version = "1.54.0", features = ["rt-multi-thread", "macros", "time", "process", "sync"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+
+[dev-dependencies]
+wiremock = "0.6.5"
