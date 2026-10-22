@@ -741,18 +741,14 @@ fn inbox_line(app: &App, entry: &InboxEntry) -> Line<'static> {
     let theme = &app.theme;
     let muted = Style::new().fg(theme.muted);
     let mut spans = vec![if app.data.is_new(&entry.detail) {
-        marker("• ".into(), theme.title)
+        marker("•".into(), theme.title)
     } else {
         Span::raw("   ")
     }];
     match &entry.detail {
         Detail::PullRequest(pr) => {
             spans.push(Span::styled(format!("!{}  ", pr.pull_request_id), muted));
-            spans.extend(
-                pr_markers(app, pr)
-                    .into_iter()
-                    .map(|span| Span::styled(format!("{} ", span.content), span.style)),
-            );
+            spans.extend(pr_markers(app, pr));
             spans.push(Span::raw(pr.title.clone()));
         }
         Detail::WorkItem(item) => {
@@ -760,7 +756,7 @@ fn inbox_line(app: &App, entry: &InboxEntry) -> Line<'static> {
                 format!("#{} ", item.id),
                 Style::new().fg(type_color(app, &item.fields.work_item_type)),
             ));
-            spans.push(marker("@ ".into(), theme.title));
+            spans.push(marker("@".into(), theme.title));
             spans.push(Span::raw(item.fields.title.clone()));
         }
         Detail::Build(build) => {
@@ -845,6 +841,39 @@ mod tests {
 
     fn text(lines: &[Line]) -> Vec<String> {
         lines.iter().map(ToString::to_string).collect()
+    }
+
+    #[test]
+    fn inbox_markers_are_separated_by_a_single_space() {
+        let mut app = main_app();
+        let pr = pull_request(7, "Fix it", "me", "2026-10-01T10:00:00Z");
+        app.data.pr_signals.insert(
+            7,
+            Signals {
+                unresolved: 2,
+                waiting: true,
+                ..Default::default()
+            },
+        );
+        app.data.inbox_seen = Some(Default::default());
+        let pr_entry = InboxEntry {
+            detail: Detail::PullRequest(Box::new(pr)),
+            since: String::new(),
+        };
+        let item_entry = InboxEntry {
+            detail: Detail::WorkItem(Box::new(work_item(
+                10,
+                "Order list",
+                "User Story",
+                "Active",
+            ))),
+            since: String::new(),
+        };
+
+        let pr_line = inbox_line(&app, &pr_entry).to_string();
+        assert!(pr_line.starts_with("• !7  ✎2 ◔ Fix it"), "{pr_line:?}");
+        let item_line = inbox_line(&app, &item_entry).to_string();
+        assert!(item_line.starts_with("• #10 @ Order list"), "{item_line:?}");
     }
 
     fn screen(app: &App) -> String {
