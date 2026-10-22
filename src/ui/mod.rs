@@ -294,14 +294,15 @@ fn render_detail(frame: &mut Frame, app: &App, block: Block, area: Rect) {
         (Detail::Build(build), _) => build_detail::lines(app, build),
     };
     let (lines, slots) = place_images(app, lines, width);
-    frame.render_widget(
-        Paragraph::new(lines)
-            .wrap(Wrap { trim: false })
-            .scroll((app.detail_scroll, 0)),
-        content,
-    );
+    let paragraph = Paragraph::new(lines).wrap(Wrap { trim: false });
+    let total = paragraph.line_count(content.width);
+    let max_scroll =
+        u16::try_from(total.saturating_sub(usize::from(content.height))).unwrap_or(u16::MAX);
+    app.detail_max_scroll.set(max_scroll);
+    let scroll = app.detail_scroll.min(max_scroll);
+    frame.render_widget(paragraph.scroll((scroll, 0)), content);
     for slot in slots {
-        let top = i32::from(slot.row) - i32::from(app.detail_scroll);
+        let top = i32::from(slot.row) - i32::from(scroll);
         let fits = top >= 0 && top + i32::from(slot.rows) <= i32::from(content.height);
         if !fits || slot.indent >= content.width {
             continue;

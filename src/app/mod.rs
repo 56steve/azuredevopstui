@@ -53,6 +53,8 @@ pub struct App {
     /// `None` while the selected detail is loading.
     pub detail_info: Option<DetailInfo>,
     pub detail_scroll: u16,
+    /// Furthest the detail can scroll, as measured by the last render.
+    pub detail_max_scroll: std::cell::Cell<u16>,
     pub detail_tab: DetailTab,
     pub popup: Option<Popup>,
     /// Iteration path of the shown sprint; `None` is the team's current sprint.
@@ -92,6 +94,7 @@ impl App {
             detail: None,
             detail_info: None,
             detail_scroll: 0,
+            detail_max_scroll: std::cell::Cell::new(0),
             detail_tab: DetailTab::default(),
             popup: None,
             show_help: false,
@@ -1421,9 +1424,14 @@ impl App {
 
     fn scroll_detail(&mut self, down: bool) {
         self.detail_scroll = if down {
-            self.detail_scroll.saturating_add(1)
+            self.detail_scroll
+                .saturating_add(1)
+                .min(self.detail_max_scroll.get())
         } else {
-            self.detail_scroll.saturating_sub(1)
+            // A resize can leave the offset past the end; step back from the end.
+            self.detail_scroll
+                .min(self.detail_max_scroll.get())
+                .saturating_sub(1)
         };
     }
 
@@ -2045,6 +2053,7 @@ mod tests {
         let mut app = app();
         open_pull_request(&mut app);
         ctrl(&mut app, 'l');
+        app.detail_max_scroll.set(10);
 
         press(&mut app, KeyCode::Char('j'));
         press(&mut app, KeyCode::Char('j'));
@@ -2052,6 +2061,35 @@ mod tests {
 
         assert_eq!(app.detail_scroll, 1);
         assert_eq!(app.selections[1], 0);
+    }
+
+    #[test]
+    fn detail_scroll_stops_at_the_end_of_the_content() {
+        let mut app = app();
+        open_pull_request(&mut app);
+        ctrl(&mut app, 'l');
+        app.detail_max_scroll.set(2);
+
+        for _ in 0..5 {
+            press(&mut app, KeyCode::Char('j'));
+        }
+        assert_eq!(app.detail_scroll, 2);
+
+        press(&mut app, KeyCode::Char('k'));
+        assert_eq!(app.detail_scroll, 1);
+    }
+
+    #[test]
+    fn scrolling_up_recovers_when_content_shrinks_below_the_offset() {
+        let mut app = app();
+        open_pull_request(&mut app);
+        ctrl(&mut app, 'l');
+        app.detail_scroll = 9;
+        app.detail_max_scroll.set(3);
+
+        press(&mut app, KeyCode::Char('k'));
+
+        assert_eq!(app.detail_scroll, 2);
     }
 
     #[test]
